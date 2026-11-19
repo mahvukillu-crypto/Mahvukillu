@@ -17,7 +17,8 @@ def _mix(a, b, t):
     return tuple(int(a[i] * (1 - t) + b[i] * t) for i in range(3))
 
 
-def build_illustration(lines, layout: dict, month: int = 7, seed: int = 3, size=(2000, 1070)) -> bytes:
+def build_illustration(lines, layout: dict, month: int = 7, seed: int = 3, size=(2000, 1070), with_labels: bool = False):
+    """Tagastab PNG baidid; with_labels=True korral (puhas, tähistega) paari."""
     rng = np.random.default_rng(seed)
     L, Wd = layout["L"], layout["W"]
     SS = 2
@@ -283,9 +284,71 @@ def build_illustration(lines, layout: dict, month: int = 7, seed: int = 3, size=
     for pl in sorted(layout["plants"], key=lambda q: -((np.array([q["x"], q["y"], 0]) - C) @ fw)):
         draw_plant(pl)
 
+    # tähiste asukohad: iga grupi kõrgeima taime kohal
+    pins = []
+    for dr in layout["drifts"]:
+        ln = lines[dr["s"]]; p = ln.plant
+        hh = p.height if p.form not in ("tree", "conifer") else min(p.height, 2.2 + 0.4 * span)
+        sx, sy, _ = proj([dr["cx"], dr["cy"], hh * 1.05 + 0.05])
+        bx, by, _ = proj([dr["cx"], dr["cy"], hh * 0.6])
+        pins.append((ln, sx / SS, (sy / SS) - 20, bx / SS, (by / SS) - 20))
+
     arr = np.asarray(img).astype(float)
     yy, xx = np.mgrid[0:H, 0:W]
     arr *= (1 - 0.08 * (((xx - W / 2) / (W / 2)) ** 2 + ((yy - H / 2) / (H / 2)) ** 2))[..., None]
     img = Image.fromarray(np.clip(arr, 0, 255).astype(np.uint8)).resize((FW, FH), Image.LANCZOS).crop((0, 20, FW, FH - 110))
     buf = io.BytesIO(); img.save(buf, format="PNG")
+    if not with_labels:
+        return buf.getvalue()
+    return buf.getvalue(), _labeled(img, lines, pins)
+
+
+def _font(size, bold=False):
+    from PIL import ImageFont
+    import matplotlib, os
+    f = os.path.join(matplotlib.get_data_path(), "fonts", "ttf", "DejaVuSans-Bold.ttf" if bold else "DejaVuSans.ttf")
+    try:
+        return ImageFont.truetype(f, size)
+    except OSError:
+        return ImageFont.load_default()
+
+
+def _labeled(img, lines, pins) -> bytes:
+    """Lisab iga grupi kohale numbri ja pildi alla legendi."""
+    w, h = img.size
+    cols = 3 if w >= 1500 else 2
+    rows = math.ceil(len(lines) / cols)
+    row_h = 46
+    out = Image.new("RGB", (w, h + 30 + rows * row_h + 20), "white")
+    out.paste(img, (0, 0))
+    d = ImageDraw.Draw(out)
+    r = 19
+    fb, fn, fl = _font(20, True), _font(21), _font(17)
+    placed = []
+    for ln, x, y, bx, by in sorted(pins, key=lambda q: q[2]):
+        y = min(y, by - 30)
+        for _ in range(40):   # väldi kattumist
+            if all((x - px) ** 2 + (y - py) ** 2 > (2.2 * r) ** 2 for px, py in placed):
+                break
+            y -= r * 0.9
+        y = max(r + 4, y)
+        placed.append((x, y))
+        d.line([(x, y + r), (bx, by)], fill=(255, 255, 255), width=4)
+        d.line([(x, y + r), (bx, by)], fill=_hex(ln.color), width=2)
+        d.ellipse([bx - 5, by - 5, bx + 5, by + 5], fill=_hex(ln.color), outline="white", width=2)
+        d.ellipse([x - r, y - r, x + r, y + r], fill=_hex(ln.color), outline="white", width=3)
+        tc = "white" if sum(_hex(ln.color)[i] * k for i, k in enumerate((.299, .587, .114))) < 150 else (31, 42, 34)
+        d.text((x, y), str(ln.nr), font=fb, fill=tc, anchor="mm")
+    # legend
+    y0 = h + 30
+    colw = (w - 60) / cols
+    for i, ln in enumerate(lines):
+        cx = 30 + (i % cols) * colw; cy = y0 + (i // cols) * row_h + row_h / 2
+        d.ellipse([cx, cy - 16, cx + 32, cy + 16], fill=_hex(ln.color), outline=(0, 0, 0))
+        tc = "white" if sum(_hex(ln.color)[j] * k for j, k in enumerate((.299, .587, .114))) < 150 else (31, 42, 34)
+        d.text((cx + 16, cy), str(ln.nr), font=_font(16, True), fill=tc, anchor="mm")
+        d.text((cx + 44, cy - 2), ln.plant.name, font=fn, fill=(31, 42, 34), anchor="lm")
+        tw = d.textlength(ln.plant.name, font=fn)
+        d.text((cx + 52 + tw, cy - 1), ln.plant.latin, font=fl, fill=(93, 106, 96), anchor="lm")
+    buf = io.BytesIO(); out.save(buf, format="PNG")
     return buf.getvalue()

@@ -59,7 +59,8 @@ def build_dxf(project: dict, lines, layout: dict) -> bytes:
         ln = lines[dr["s"]]
         if len(dr["poly"]) > 2:
             poly(dr["poly"], "TRIIVID")
-        text(dr["cx"], dr["cy"], 0.09 * k, f"{ln.nr} - {dr['n']} tk", "TRIIVI_TEKST", "middle")
+        text(dr["cx"], dr["cy"] + 0.06 * k, 0.08 * k, f"{ln.nr}. {ln.plant.name}", "TRIIVI_TEKST", "middle")
+        text(dr["cx"], dr["cy"] - 0.07 * k, 0.08 * k, f"{dr['n']} tk", "TRIIVI_TEKST", "middle")
     for p in layout["plants"]:
         ln = lines[p["s"]]
         circle(p["x"], p["y"], ln.plant.spacing * 0.4, lname(ln))

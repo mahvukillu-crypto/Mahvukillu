@@ -57,6 +57,7 @@ class Plant:
     bloom: list = field(default_factory=list)
     flower_hex: str = "#dddddd"
     flower_en: str = ""
+    flower_et: str = ""
     leaf_hex: str = "#5d8a48"
     form: str = "mound"
     head: str = "cluster"
@@ -91,15 +92,16 @@ def parse_bloom(text) -> list:
 
 
 def parse_color(text):
+    """Tagastab (hex, inglise sõna, eesti sõna) esimese värvisõna järgi."""
     if not isinstance(text, str):
-        return None, ""
+        return None, "", ""
     t = text.lower()
     best = None
     for word, hx, en in COLORS:
         i = t.find(word)
         if i >= 0 and (best is None or i < best[0]):
-            best = (i, hx, en)
-    return (best[1], best[2]) if best else (None, "")
+            best = (i, hx, en, word)
+    return (best[1], best[2], best[3]) if best else (None, "", "")
 
 
 def _num(v):
@@ -126,7 +128,8 @@ def _col(df, *names):
 
 def derive_visual(p: Plant, form_override: str = "", color_override: str = ""):
     p.bloom = parse_bloom(p.bloom_text)
-    hx, en = parse_color(p.flower_text)
+    hx, en, et = parse_color(p.flower_text)
+    p.flower_et = et
     p.flower_hex = color_override if re.fullmatch(r"#[0-9a-fA-F]{6}", color_override or "") else (hx or "#eeeeee")
     p.flower_en = en
     p.leaf_hex = LEAF.get(p.type, "#5d8a48")

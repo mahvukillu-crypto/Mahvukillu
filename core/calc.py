@@ -5,6 +5,12 @@ from dataclasses import dataclass
 from .db import Plant
 
 
+# selgelt eristuvad tähisevärvid plaanile (järjekorras)
+PALETTE = ["#e6194b", "#3cb44b", "#4363d8", "#f58231", "#911eb4", "#46c0c0", "#f032e6", "#9a6324",
+           "#bcbd22", "#000075", "#fabed4", "#808000", "#ffd8b1", "#aaffc3", "#dcbeff", "#800000",
+           "#a9a9a9", "#ffe119", "#469990", "#e6beff"]
+
+
 @dataclass
 class Line:
     nr: int
@@ -12,6 +18,10 @@ class Line:
     share: float      # 0..1
     area: float       # m²
     qty: int
+
+    @property
+    def color(self):
+        return PALETTE[(self.nr - 1) % len(PALETTE)]
 
     @property
     def total(self):

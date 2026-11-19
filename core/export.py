@@ -66,8 +66,8 @@ def run_all(db: dict, selection, L: float, W: float, name: str, month: int = 7, 
         "xlsx": build_xlsx(project, lines),
         "dxf": build_dxf(project, lines, layout),
         "plan_png": build_plan_png(project, lines, layout),
-        "illustration": build_illustration(lines, layout, month=month),
     }
+    res["illustration"], res["illustration_labeled"] = build_illustration(lines, layout, month=month, with_labels=True)
     return res
 
 
@@ -79,6 +79,7 @@ def build_zip(res: dict, photo: bytes | None = None) -> bytes:
         z.writestr(f"{base}_istutusplaan.dxf", res["dxf"])
         z.writestr(f"{base}_istutusplaan.png", res["plan_png"])
         z.writestr(f"{base}_illustratsioon.png", res["illustration"])
+        z.writestr(f"{base}_illustratsioon_tahistega.png", res["illustration_labeled"])
         if photo:
             z.writestr(f"{base}_visuaal.png", photo)
         z.writestr(f"{base}_paigutus.json", json.dumps(res["layout"], ensure_ascii=False))

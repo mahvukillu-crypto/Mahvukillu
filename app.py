@@ -4,8 +4,15 @@ Käivitamine arvutis:  streamlit run app.py
 """
 from __future__ import annotations
 import io
+import os
+import sys
 import pandas as pd
 import streamlit as st
+
+HERE = os.path.dirname(os.path.abspath(__file__))
+if HERE not in sys.path:
+    sys.path.insert(0, HERE)
+DB_PATH = os.path.join(HERE, "data", "taimed.xlsx")
 
 from core.db import load_db, ROMAN
 from core.export import run_all, build_zip, slug, VAT
@@ -43,7 +50,7 @@ if pw and not st.session_state.get("auth"):
 
 @st.cache_data(show_spinner=False)
 def _load(data: bytes | None):
-    return load_db(io.BytesIO(data) if data else "data/taimed.xlsx")
+    return load_db(io.BytesIO(data) if data else DB_PATH)
 
 
 # --- külgriba: andmebaas ---
@@ -57,7 +64,7 @@ with st.sidebar:
         st.stop()
     priced = sum(1 for p in db.values() if p.price is not None)
     st.caption(f"{len(db)} taime, neist hinnaga {priced}.")
-    with open("data/taimed.xlsx", "rb") as f:
+    with open(DB_PATH, "rb") as f:
         st.download_button("Lae alla andmebaasi põhi (xlsx)", f.read(), "taimed.xlsx")
     st.divider()
     st.header("Fotorealistlik pilt")
@@ -158,8 +165,11 @@ with t2:
     b.download_button("Lae alla joonis (DXF, AutoCAD)", res["dxf"], f"{base}_istutusplaan.dxf")
     st.caption("DXF: mõõdud meetrites, iga liik eraldi kihil. AutoCADis „Salvesta kui“ → DWG.")
 with t3:
-    st.image(res["illustration"], use_container_width=True)
-    st.download_button("Lae alla illustratsioon (PNG)", res["illustration"], f"{base}_illustratsioon.png")
+    show_labels = st.toggle("Näita taimede tähiseid", value=True, help="Tähistega pilt aitab kontrollida, kus mis taim on. Fotorealistliku pildi jaoks kasutatakse tähisteta pilti.")
+    st.image(res["illustration_labeled"] if show_labels else res["illustration"], use_container_width=True)
+    a, b = st.columns(2)
+    a.download_button("Lae alla tähistega (PNG)", res["illustration_labeled"], f"{base}_illustratsioon_tahistega.png")
+    b.download_button("Lae alla tähisteta (PNG)", res["illustration"], f"{base}_illustratsioon.png")
 with t4:
     prompt = st.text_area("Pildi kirjeldus (koostatud automaatselt, võid muuta)", build_prompt(lines, res["layout"], month), height=220)
     if not api_key:
@@ -172,6 +182,8 @@ with t4:
                 st.error(str(e))
     if st.session_state.get("photo"):
         st.image(st.session_state.photo, use_container_width=True)
+        with st.expander("Võrdle: millised taimed peaksid pildil olema"):
+            st.image(res["illustration_labeled"], use_container_width=True)
         st.caption("Illustratiivne visuaal. Kontrolli enne kliendile saatmist, et taimed näeksid õiged välja.")
         st.download_button("Lae alla visuaal (PNG)", st.session_state.photo, f"{base}_visuaal.png")
 

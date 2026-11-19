@@ -5,7 +5,7 @@ Veebirakendus haljastuse hinnapäringute jaoks. Sisestad peenra mõõdud ja vali
 - **kogusetabeli** koos hindade ja käibemaksuga (Excel),
 - **istutusplaani** pealtvaates koos legendiga (PNG),
 - **DXF-joonise** AutoCADi jaoks (iga liik eraldi kihil, legend, kirjanurk),
-- **illustratsiooni** peenrast eest vaadates,
+- **illustratsiooni** peenrast eest vaadates (ka numbritega tähistatud versioon, et visuaali taimede kaupa kontrollida),
 - **fotorealistliku visuaali** OpenAI pildimudeliga (illustratsioon + automaatne kirjeldus).
 
 Kõik failid saab alla laadida eraldi või ühe ZIP-failina.
